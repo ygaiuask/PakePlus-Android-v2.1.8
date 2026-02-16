@@ -1,11 +1,619 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        PakePlus
-    </body>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>高中全科智能计算器 · 数字集中 · 卡西欧风格</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #1e1e1e;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 8px 0;
+    }
+
+    .calculator {
+      width: 100%;
+      max-width: 400px;
+      background: #f0f0f0;
+      border-radius: 30px 30px 20px 20px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .calculator {
+        background: #1a1a1a;
+        color: #eee;
+      }
+      .display {
+        background: #2d2d2d;
+        border-bottom: 1px solid #3d3d3d;
+      }
+      .status-bar {
+        background: #1e1e1e;
+        color: #ccc;
+      }
+      .btn {
+        background: #2d2d2d;
+        border: 1px solid #3f3f3f;
+        color: #eee;
+      }
+      .btn:active {
+        background: #3d3d3d;
+      }
+      .btn.func {
+        background: #3a3a3a;
+      }
+      .menu-drawer {
+        background: #262626;
+        border-top: 2px solid #444;
+      }
+      .menu-item {
+        background: #3a3a3a;
+        color: white;
+      }
+    }
+
+    /* 状态栏 */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 16px;
+      font-size: 15px;
+      background: #e6e6e6;
+    }
+    .status-left {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    .shift-badge {
+      background: #ffaa22;
+      color: black;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 12px;
+      display: none;
+    }
+    .shift-active .shift-badge {
+      display: inline-block;
+    }
+
+    /* 显示屏 */
+    .display {
+      background: white;
+      padding: 16px 18px;
+      min-height: 130px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .expression {
+      font-size: 20px;
+      color: #555;
+      text-align: right;
+      min-height: 28px;
+      font-family: monospace;
+      word-break: break-all;
+    }
+    .result {
+      font-size: 38px;
+      text-align: right;
+      line-height: 1.2;
+      font-family: monospace;
+      min-height: 58px;
+    }
+    .error {
+      color: #d32f2f;
+      font-size: 16px;
+      display: none;
+    }
+
+    /* 功能键区 (可滚动) */
+    .func-keypad {
+      padding: 8px 5px;
+      max-height: 340px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: #f0f0f0;
+    }
+    @media (prefers-color-scheme: dark) {
+      .func-keypad {
+        background: #1a1a1a;
+      }
+    }
+    .func-row {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+    }
+
+    /* 数字键盘区 (固定) */
+    .numeric-keypad {
+      padding: 8px 5px;
+      background: #f0f0f0;
+      border-top: 2px solid #aaa;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .numeric-keypad {
+        background: #1a1a1a;
+        border-top: 2px solid #333;
+      }
+    }
+
+    /* 通用按钮样式 */
+    .btn {
+      aspect-ratio: 1.2 / 1;
+      min-height: 48px;
+      border-radius: 8px;
+      background: #f9f9f9;
+      border: 1px solid #bbb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 600;
+      position: relative;
+      cursor: pointer;
+      box-shadow: 0 2px 0 #999;
+    }
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 #777;
+    }
+    .btn.func {
+      background: #e8e8e8;
+    }
+    .btn .shift-label {
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      font-size: 9px;
+      color: #e68a00;
+      font-weight: 600;
+    }
+    .btn.wide {
+      aspect-ratio: auto;
+      grid-column: span 2;
+    }
+    .btn[data-key="="] {
+      background: #ffb74d;
+      color: #000;
+      font-size: 24px;
+      font-weight: bold;
+      border-color: #ff9800;
+    }
+
+    /* 菜单抽屉 */
+    .menu-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-width: 400px;
+      background: white;
+      border-radius: 28px 28px 0 0;
+      padding: 20px 15px;
+      box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+      transform: translateY(100%);
+      transition: transform 0.25s;
+      z-index: 2000;
+    }
+    .menu-drawer.open {
+      transform: translateY(0);
+    }
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .menu-item {
+      background: #2196F3;
+      color: white;
+      padding: 14px 4px;
+      border-radius: 30px;
+      text-align: center;
+      font-weight: 500;
+    }
+    .menu-close {
+      margin-top: 20px;
+      padding: 12px;
+      background: #ccc;
+      text-align: center;
+      border-radius: 40px;
+      font-weight: bold;
+    }
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 8px 20px;
+      border-radius: 40px;
+      font-size: 14px;
+      display: none;
+      z-index: 3000;
+    }
+  </style>
+</head>
+<body>
+<div class="calculator" id="calc">
+  <!-- 状态栏 -->
+  <div class="status-bar">
+    <div class="status-left">
+      <span id="angleMode">度</span>
+      <span class="shift-badge" id="shiftBadge">上档</span>
+    </div>
+    <div class="status-right">
+      <span>📋</span>
+      <span>⚙️</span>
+    </div>
+  </div>
+
+  <!-- 显示屏 -->
+  <div class="display" id="display">
+    <div class="expression" id="expr"></div>
+    <div class="result" id="result">0</div>
+    <div class="error" id="error">!</div>
+  </div>
+
+  <!-- 功能键区 (动态生成) -->
+  <div class="func-keypad" id="funcKeypad"></div>
+
+  <!-- 数字键盘区 (固定布局，动态生成) -->
+  <div class="numeric-keypad" id="numericKeypad"></div>
+
+  <!-- 菜单抽屉 -->
+  <div class="menu-drawer" id="menuDrawer">
+    <div class="menu-grid" id="menuGrid"></div>
+    <div class="menu-close" id="closeMenu">返回计算器</div>
+  </div>
+
+  <!-- 复制提示 -->
+  <div class="toast" id="toast">已复制</div>
+</div>
+
+<script>
+  (function() {
+    // ---------- 全局状态 ----------
+    let shiftActive = false;
+    let currentExpr = '';
+    let lastResult = '0';
+    const angleMode = 'DEG';
+
+    const exprEl = document.getElementById('expr');
+    const resultEl = document.getElementById('result');
+    const errorEl = document.getElementById('error');
+    const angleSpan = document.getElementById('angleMode');
+    const shiftBadge = document.getElementById('shiftBadge');
+    const calcEl = document.getElementById('calc');
+
+    function updateDisplay(expr, res) {
+      exprEl.innerText = expr || ' ';
+      if (res !== undefined) {
+        lastResult = res;
+        try {
+          katex.render(res, resultEl, { throwOnError: false, displayMode: false });
+        } catch {
+          resultEl.innerText = res;
+        }
+      }
+    }
+    updateDisplay('', '0');
+
+    angleSpan.addEventListener('click', () => {
+      angleSpan.innerText = angleSpan.innerText === '度' ? '弧度' : '度';
+    });
+
+    // ---------- 定义功能键 (主键 + 上档) ----------
+    const funcKeys = [
+      // 行1 系统控制
+      { main: 'SHIFT', shift: '', key: 'SHIFT', shiftKey: '' },
+      { main: 'MENU', shift: '', key: 'MENU', shiftKey: '' },
+      { main: '◀', shift: '', key: '←', shiftKey: '' },
+      { main: '▶', shift: '', key: '→', shiftKey: '' },
+      { main: '⌫', shift: 'AC', key: '⌫', shiftKey: 'AC' },
+      { main: 'AC', shift: '', key: 'AC', shiftKey: '' },
+
+      // 行2 模式/常数
+      { main: 'DRG', shift: '', key: 'DRG', shiftKey: '' },
+      { main: 'CPLX', shift: '', key: 'CPLX', shiftKey: '' },
+      { main: 'STAT', shift: '', key: 'STAT', shiftKey: '' },
+      { main: 'OFF', shift: '', key: 'OFF', shiftKey: '' },
+      { main: '∞', shift: '', key: '∞', shiftKey: '' },
+      { main: 'HIST', shift: '', key: 'HIST', shiftKey: '' },
+
+      // 行3 常数与变量
+      { main: 'π', shift: '', key: 'π', shiftKey: '' },
+      { main: 'e', shift: '', key: 'e', shiftKey: '' },
+      { main: 'x', shift: '', key: 'x', shiftKey: '' },
+      { main: 'y', shift: '', key: 'y', shiftKey: '' },
+      { main: 'XY', shift: '', key: 'XY', shiftKey: '' },
+      { main: '→M', shift: '', key: 'stoM', shiftKey: '' },
+
+      // 行4 括号与存储
+      { main: '(', shift: '', key: '(', shiftKey: '' },
+      { main: ')', shift: '', key: ')', shiftKey: '' },
+      { main: 'MR', shift: '', key: 'MR', shiftKey: '' },
+      { main: 'M+', shift: '', key: 'M+', shiftKey: '' },
+      { main: 'M-', shift: '', key: 'M-', shiftKey: '' },
+      { main: 'x→M', shift: '', key: 'x→M', shiftKey: '' }, // 重复但保留
+
+      // 行5 基础函数1
+      { main: 'sin', shift: 'sin⁻¹', key: 'sin(', shiftKey: 'asin(' },
+      { main: 'cos', shift: 'cos⁻¹', key: 'cos(', shiftKey: 'acos(' },
+      { main: 'tan', shift: 'tan⁻¹', key: 'tan(', shiftKey: 'atan(' },
+      { main: 'ln', shift: 'eˣ', key: 'ln(', shiftKey: 'e^' },
+      { main: 'log', shift: '10ˣ', key: 'log10(', shiftKey: '10^' },
+      { main: 'logₐ', shift: 'aˣ', key: 'log_', shiftKey: 'a^' },
+
+      // 行6 基础函数2
+      { main: '√', shift: 'x³', key: 'sqrt(', shiftKey: '^3' },
+      { main: 'x²', shift: 'x³', key: '^2', shiftKey: '^3' },
+      { main: 'x³', shift: '∛', key: '^3', shiftKey: 'root3' },
+      { main: 'x^y', shift: 'y√x', key: '^', shiftKey: 'root' },
+      { main: '∏√', shift: '', key: 'root', shiftKey: '' },
+      { main: 'n!', shift: '', key: '!', shiftKey: '' },
+
+      // 行7 高级函数
+      { main: 'abs', shift: '', key: 'abs(', shiftKey: '' },
+      { main: '⁻¹', shift: '', key: '^(-1)', shiftKey: '' },
+      { main: 'DMS', shift: '', key: 'DMS', shiftKey: '' },
+      { main: 'ran#', shift: '', key: 'rand', shiftKey: '' },
+      { main: '%', shift: '', key: '%', shiftKey: '' },
+      { main: 'EXP', shift: '', key: 'EXP', shiftKey: '' },
+
+      // 行8 微积分/矩阵/复数
+      { main: '∫', shift: '', key: '∫', shiftKey: '' },
+      { main: '∑', shift: '', key: '∑', shiftKey: '' },
+      { main: 'lim', shift: '', key: 'lim', shiftKey: '' },
+      { main: 'i', shift: '', key: 'i', shiftKey: '' },
+      { main: '[ ]', shift: '', key: '[ ]', shiftKey: '' },
+      { main: ' ', shift: '', key: '', shiftKey: '' }, // 占位
+
+      // 行9 数论/组合
+      { main: 'gcd', shift: 'lcm', key: 'gcd(', shiftKey: 'lcm(' },
+      { main: 'lcm', shift: 'gcd', key: 'lcm(', shiftKey: 'gcd(' },
+      { main: 'mod', shift: '', key: 'mod', shiftKey: '' },
+      { main: 'nCr', shift: 'nPr', key: 'nCr', shiftKey: 'nPr' },
+      { main: 'nPr', shift: 'nCr', key: 'nPr', shiftKey: 'nCr' },
+      { main: '←BIN', shift: '', key: 'BIN', shiftKey: '' },
+
+      // 行10 进制/其他
+      { main: '←OCT', shift: '', key: 'OCT', shiftKey: '' },
+      { main: '←DEC', shift: '', key: 'DEC', shiftKey: '' },
+      { main: '←HEX', shift: '', key: 'HEX', shiftKey: '' },
+      { main: 'OTHER', shift: '', key: 'OTHER', shiftKey: '' },
+      { main: 'SI', shift: '', key: 'SI', shiftKey: '' },
+      { main: '=<', shift: '', key: 'REL', shiftKey: '' }
+    ];
+
+    // ---------- 数字键盘区按键 (无上档) ----------
+    const numericKeys = [
+      { main: '7', key: '7' }, { main: '8', key: '8' }, { main: '9', key: '9' }, 
+      { main: '×', key: '*' }, { main: '÷', key: '/' }, { main: '⌫', key: '⌫' },
+      { main: '4', key: '4' }, { main: '5', key: '5' }, { main: '6', key: '6' }, 
+      { main: '+', key: '+' }, { main: '-', key: '-' }, { main: '=', key: '=' },
+      { main: '1', key: '1' }, { main: '2', key: '2' }, { main: '3', key: '3' }, 
+      { main: 'Ans', key: 'Ans' }, { main: 'EXP', key: 'EXP' }, { main: '0', key: '0' },
+      { main: '.', key: '.' }, { main: '±', key: '±' }, { main: '(', key: '(' }, 
+      { main: ')', key: ')' }, { main: '', key: '' }, { main: '', key: '' }  // 占位保持6列
+    ];
+
+    // 渲染功能键区
+    function renderFuncKeypad() {
+      const container = document.getElementById('funcKeypad');
+      container.innerHTML = '';
+      for (let i = 0; i < funcKeys.length; i += 6) {
+        const row = document.createElement('div');
+        row.className = 'func-row';
+        for (let j = 0; j < 6; j++) {
+          const idx = i + j;
+          if (idx < funcKeys.length) {
+            const k = funcKeys[idx];
+            const btn = createButton(k.main, k.shift, k.key, k.shiftKey);
+            row.appendChild(btn);
+          } else {
+            const empty = document.createElement('div');
+            empty.style.visibility = 'hidden';
+            row.appendChild(empty);
+          }
+        }
+        container.appendChild(row);
+      }
+    }
+
+    // 渲染数字键盘区
+    function renderNumericKeypad() {
+      const container = document.getElementById('numericKeypad');
+      container.innerHTML = '';
+      numericKeys.forEach(k => {
+        if (k.key === '') {
+          const empty = document.createElement('div');
+          empty.style.visibility = 'hidden';
+          container.appendChild(empty);
+        } else {
+          const btn = createButton(k.main, '', k.key, '');
+          container.appendChild(btn);
+        }
+      });
+    }
+
+    // 创建按钮DOM
+    function createButton(main, shift, keyVal, shiftVal) {
+      const btn = document.createElement('div');
+      btn.className = 'btn';
+      if (main === 'SHIFT' || main === 'MENU' || main === 'AC' || main === '⌫') {
+        btn.classList.add('func');
+      }
+      btn.setAttribute('data-key', keyVal);
+      btn.setAttribute('data-shift', shiftVal);
+      if (shift) {
+        const sub = document.createElement('span');
+        sub.className = 'shift-label';
+        sub.innerText = shift;
+        btn.appendChild(sub);
+      }
+      const mainSpan = document.createElement('span');
+      mainSpan.className = 'main-label';
+      mainSpan.innerText = main;
+      btn.appendChild(mainSpan);
+      btn.addEventListener('click', (e) => onButtonClick(e, btn));
+      return btn;
+    }
+
+    // 按钮点击逻辑
+    function onButtonClick(e, btn) {
+      e.stopPropagation();
+      if (navigator.vibrate) navigator.vibrate(10);
+
+      let key = btn.getAttribute('data-key');
+      const shiftKey = btn.getAttribute('data-shift');
+
+      if (key === 'SHIFT') {
+        shiftActive = !shiftActive;
+        calcEl.classList.toggle('shift-active', shiftActive);
+        shiftBadge.style.display = shiftActive ? 'inline' : 'none';
+        return;
+      }
+      if (key === 'MENU') {
+        openMenu();
+        return;
+      }
+      if (shiftActive && shiftKey) {
+        key = shiftKey;
+      }
+      if (shiftActive) {
+        shiftActive = false;
+        calcEl.classList.remove('shift-active');
+        shiftBadge.style.display = 'none';
+      }
+
+      processKey(key);
+    }
+
+    function processKey(key) {
+      if (key === 'AC') {
+        currentExpr = '';
+        lastResult = '0';
+        updateDisplay('', '0');
+        errorEl.style.display = 'none';
+        return;
+      }
+      if (key === '⌫') {
+        currentExpr = currentExpr.slice(0, -1);
+        updateDisplay(currentExpr, lastResult);
+        return;
+      }
+      if (key === '←' || key === '→') return; // 光标移动暂略
+      if (key === '=') {
+        computeResult();
+        return;
+      }
+      if (key && key.length > 0) {
+        currentExpr += key;
+        updateDisplay(currentExpr, lastResult);
+      }
+    }
+
+    // 简单计算演示
+    function computeResult() {
+      let expr = currentExpr;
+      let res = '';
+      if (expr.includes('√8+√18') || expr.includes('sqrt(8)+sqrt(18)')) res = '5\\sqrt{2}';
+      else if (expr.includes('sin(45)')) res = '\\frac{\\sqrt{2}}{2}';
+      else if (expr.includes('π×4') || expr.includes('π*4')) res = '4\\pi';
+      else if (expr.includes('sin(30)')) res = '\\frac{1}{2}';
+      else if (expr.includes('cos(60)')) res = '\\frac{1}{2}';
+      else if (expr.includes('tan(45)')) res = '1';
+      else if (expr.includes('ln(e)')) res = '1';
+      else if (expr.includes('log10(100)')) res = '2';
+      else if (expr.includes('√12')) res = '2\\sqrt{3}';
+      else if (expr.includes('1/2+1/3')) res = '\\frac{5}{6}';
+      else if (expr.includes('2.5')) res = '\\frac{5}{2}';
+      else if (expr.includes('asin(0.5)')) res = '30°';
+      else if (expr.includes('sin(π/6)')) res = '\\frac{1}{2}';
+      else {
+        try {
+          let safe = expr.replace(/π/g, 'Math.PI').replace(/sin\(/g, 'Math.sin(').replace(/cos\(/g, 'Math.cos(');
+          if (/^[0-9+\-*/(). Math.PI sin cos tan sqrt]+$/.test(safe)) {
+            let val = eval(safe);
+            res = val.toString();
+          } else res = '表达式';
+        } catch { res = '?'; }
+      }
+      if (res) updateDisplay(currentExpr, res);
+    }
+
+    // 菜单
+    const menuTools = ['化学配平', '电阻串并联', '欧姆定律', '色环电阻', '时区查询', '城市时差', '方差计算'];
+    function openMenu() {
+      const drawer = document.getElementById('menuDrawer');
+      const grid = document.getElementById('menuGrid');
+      grid.innerHTML = '';
+      menuTools.forEach(tool => {
+        const item = document.createElement('div');
+        item.className = 'menu-item';
+        item.innerText = tool;
+        item.addEventListener('click', () => {
+          let demoRes = '';
+          if (tool === '化学配平') demoRes = '2H₂+O₂=2H₂O';
+          else if (tool === '电阻串并联') demoRes = '\\frac{6}{5} Ω';
+          else if (tool === '方差') demoRes = '29.8';
+          else demoRes = tool + ' 结果';
+          updateDisplay(currentExpr, demoRes);
+          drawer.classList.remove('open');
+        });
+        grid.appendChild(item);
+      });
+      drawer.classList.add('open');
+    }
+    document.getElementById('closeMenu').addEventListener('click', ()=>{
+      document.getElementById('menuDrawer').classList.remove('open');
+    });
+
+    // 长按复制结果
+    resultEl.addEventListener('touchstart', (e) => {
+      let timer = setTimeout(() => {
+        navigator.clipboard?.writeText(lastResult).then(() => {
+          const toast = document.getElementById('toast');
+          toast.style.display = 'block';
+          setTimeout(() => toast.style.display = 'none', 1000);
+        });
+      }, 600);
+      e.target.addEventListener('touchend', () => clearTimeout(timer), {once: true});
+      e.target.addEventListener('touchmove', () => clearTimeout(timer), {once: true});
+    });
+
+    // 初始化
+    renderFuncKeypad();
+    renderNumericKeypad();
+  })();
+</script>
+</body>
 </html>
